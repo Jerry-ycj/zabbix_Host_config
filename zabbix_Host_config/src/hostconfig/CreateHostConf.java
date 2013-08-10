@@ -1,6 +1,5 @@
 package hostconfig;
 
-import java.awt.image.VolatileImage;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -13,7 +12,7 @@ import org.dom4j.io.OutputFormat;
 import org.dom4j.io.XMLWriter;
 
 public class CreateHostConf {
-	private static String HOST_NAME = "FengLin";
+	private static String HOST_NAME = "TanGu";
 	private static String IP = "20.20.20.102";
 	
 	public static Document getDocument(List<Can> cans) {
@@ -47,6 +46,9 @@ public class CreateHostConf {
 		host.addElement("groups").addElement("group").addText("Discovered hosts");
 		Element triggers = host.addElement("triggers");
 		Element items = host.addElement("items");
+		Element templates = host.addElement("templates");
+		Element graphs = host.addElement("graphs");
+		Element macros = host.addElement("macros");
 		// 5
 		// item can 1can/5items
 		for(Can c:cans){
@@ -54,19 +56,68 @@ public class CreateHostConf {
 			createCanItem("height", items, c);
 			createCanItem("water", items, c);
 			createCanItem("watervolume", items, c);
-			createCanItem("temp", items, c);	
+			createCanItem("temp", items, c);
+			// 0-超高，1-超低
+			createCanTrigger(0,triggers,c);
+			createCanTrigger(1,triggers,c);
 			// item gun
 			for(Gun g:c.getGuns()){
 				createGunItem("volume",items,g);
 				createGunItem("pump", items, g);
+				// item transaction/gun
+				createTransactionItem(items,g);
 			}
 			// item sale_profit_loss
 			createProfitLossItem(items,c);
-		}		
-		
-		// trigger
-		
+			
+		}
+		// cardno 在 items中
+		createCardnoItem(items);		
 		return document;
+	}
+
+	private static void createCanTrigger(int i, Element triggers,Can c) {
+		Element trigger = triggers.addElement("trigger");
+		// 2
+		String param;
+		String exp;	//表达式
+		if(i==0){
+			param = "超高";
+			exp = "{"+HOST_NAME+":can"+c.getId()+".height.last(0)}>900";	// 注意>等不用人为转义
+		}else{
+			param = "超低";
+			exp = "{"+HOST_NAME+":can"+c.getId()+".height.last(0)}<250";
+		}
+		String desc = HOST_NAME+"_罐"+c.getId()+"液位"+param+"告警";
+		trigger.addElement("description").addText(desc);
+		trigger.addElement("type").addText("0");
+		trigger.addElement("expression").addText(exp);
+		trigger.addElement("url");
+		trigger.addElement("status").addText("0");
+		trigger.addElement("priority").addText("2");
+		trigger.addElement("comments");
+	}
+
+	private static void createTransactionItem(Element items, Gun g) {
+		Element item = items.addElement("item");
+		item.addAttribute("type", "2");	// trapper
+		String key = "gun"+g.getId()+".transaction";
+		item.addAttribute("key", key);
+		item.addAttribute("value_type", "0");
+		String desc = HOST_NAME+"_罐"+g.getCan().getId()+"_枪"+g.getId()+"的交易记录";
+		item.addElement("description").addText(desc);
+		addOtherChilds(item);
+		item.element("delay").setText("60");
+	}
+
+	private static void createCardnoItem(Element items) {
+		Element item = items.addElement("item");
+		item.addAttribute("type", "2");	// trapper
+		item.addAttribute("key","cardno");
+		item.addAttribute("value_type", "1");
+		item.addElement("description").addText("卡号");
+		addOtherChilds(item);
+		item.element("delay").setText("60");	// 没有主动设置这个，应该是默认配置
 	}
 
 	private static void createProfitLossItem(Element items, Can c) {
@@ -78,8 +129,7 @@ public class CreateHostConf {
 		// 2
 		String desc = HOST_NAME+"_罐"+c.getId()+"的付油损益";
 		item.addElement("description").addText(desc);
-		addOtherChilds(item);
-		
+		addOtherChilds(item);		
 		item.element("delay").setText("1800");
 		String params = createCalculatedParams(c);
 		item.element("params").setText(params);
@@ -113,7 +163,7 @@ public class CreateHostConf {
 		}else{
 			param_zn = "泵码值";
 		}
-		String desc = HOST_NAME+"_罐"+g.getCan().getId()+"枪"+g.getId()+"的"+param_zn;
+		String desc = HOST_NAME+"_罐"+g.getCan().getId()+"_枪"+g.getId()+"的"+param_zn;
 		item.addElement("description").addText(desc);
 		addOtherChilds(item);		
 	}
@@ -199,6 +249,7 @@ public class CreateHostConf {
 			xmlWriter.write(document);
 			// 关闭
 			xmlWriter.close();
+			System.out.println("completed");
 		} catch (IOException e) {
 			System.out.println("文件没有找到");
 			e.printStackTrace();
@@ -210,26 +261,49 @@ public class CreateHostConf {
 		
 		//test data
 		Can c1 = new Can(1);
-		Can c2 = new Can(3);		
-		Gun g1 = new Gun(2);
-		Gun g2 = new Gun(4);
-		Gun g3 = new Gun(6);
-		Gun g4 = new Gun(1);
+		Can c3 = new Can(3);
+		Can c4 = new Can(4);
+		
+		Gun g1 = new Gun(1);
+		Gun g2 = new Gun(2);
+		Gun g3 = new Gun(3);
+		Gun g4 = new Gun(4);
 		Gun g5 = new Gun(5);
+		Gun g6 = new Gun(6);
+		Gun g8 = new Gun(8);
+		Gun g9 = new Gun(9);
+		Gun g11 = new Gun(11);
+		Gun g12 = new Gun(12);
+		Gun g13 = new Gun(13);
+		Gun g14 = new Gun(14);
+		Gun g15 = new Gun(15);
+		
 		List<Gun> guns1 = new ArrayList<Gun>();		
 		List<Gun> guns2 = new ArrayList<Gun>();
-		guns1.add(g1);
+		List<Gun> guns3 = new ArrayList<Gun>();
 		guns1.add(g2);
-		guns2.add(g3);
+		guns1.add(g3);
+		guns1.add(g8);
+		guns1.add(g13);
+		guns2.add(g1);
 		guns2.add(g4);
 		guns2.add(g5);
-		c1.setGuns(guns1);
-		c2.setGuns(guns2);
-		cans.add(c1);
-		cans.add(c2);
+		guns2.add(g6);
+		guns2.add(g11);
+		guns2.add(g15);
+		guns3.add(g9);
+		guns3.add(g12);
+		guns3.add(g14);
 		
-		System.out.println(createCalculatedParams(c1));
-//		writeDocument(getDocument(cans), "d:/test.xml");
+		c1.setGuns(guns1);
+		c3.setGuns(guns2);
+		c4.setGuns(guns3);
+		cans.add(c1);
+		cans.add(c3);
+		cans.add(c4);
+		
+//		System.out.println(createCalculatedParams(c1));
+		writeDocument(getDocument(cans), "d:/test.xml");
 	}
 
 }
