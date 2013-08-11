@@ -2,7 +2,6 @@ package hostconfig;
 
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.dom4j.Document;
@@ -12,10 +11,15 @@ import org.dom4j.io.OutputFormat;
 import org.dom4j.io.XMLWriter;
 
 public class CreateHostConf {
-	private static String HOST_NAME = "TanGu";
-	private static String IP = "20.20.20.102";
+	private String host_name;
+	private String ip;
 	
-	public static Document getDocument(List<Can> cans) {
+	public CreateHostConf(String host_name,String ip){
+		this.host_name = host_name;
+		this.ip = ip;
+	}
+	
+	public Document getDocument(List<Can> cans) {
 		// 生成一个节点
 		Document document = DocumentHelper.createDocument();
 		// root
@@ -28,12 +32,12 @@ public class CreateHostConf {
 		root.addElement("dependencies");
 		// 3 host
 		Element host = hosts.addElement("host");
-		host.addAttribute("name", HOST_NAME);
+		host.addAttribute("name", host_name);
 		// 4
 		host.addElement("proxy_hostid").addText("0");
 		host.addElement("useip").addText("1");
 		host.addElement("dns");
-		host.addElement("ip").addText(IP);
+		host.addElement("ip").addText(ip);
 		host.addElement("port").addText("10050");
 		host.addElement("status").addText("0");	// 0-开启
 		host.addElement("useipmi").addText("0");
@@ -76,19 +80,19 @@ public class CreateHostConf {
 		return document;
 	}
 
-	private static void createCanTrigger(int i, Element triggers,Can c) {
+	private void createCanTrigger(int i, Element triggers,Can c) {
 		Element trigger = triggers.addElement("trigger");
 		// 2
 		String param;
 		String exp;	//表达式
 		if(i==0){
 			param = "超高";
-			exp = "{"+HOST_NAME+":can"+c.getId()+".height.last(0)}>900";	// 注意>等不用人为转义
+			exp = "{"+host_name+":can"+c.getId()+".height.last(0)}>900";	// 注意>等不用人为转义
 		}else{
 			param = "超低";
-			exp = "{"+HOST_NAME+":can"+c.getId()+".height.last(0)}<250";
+			exp = "{"+host_name+":can"+c.getId()+".height.last(0)}<250";
 		}
-		String desc = HOST_NAME+"_罐"+c.getId()+"液位"+param+"告警";
+		String desc = host_name+"_罐"+c.getId()+"液位"+param+"告警";
 		trigger.addElement("description").addText(desc);
 		trigger.addElement("type").addText("0");
 		trigger.addElement("expression").addText(exp);
@@ -98,19 +102,19 @@ public class CreateHostConf {
 		trigger.addElement("comments");
 	}
 
-	private static void createTransactionItem(Element items, Gun g) {
+	private void createTransactionItem(Element items, Gun g) {
 		Element item = items.addElement("item");
 		item.addAttribute("type", "2");	// trapper
 		String key = "gun"+g.getId()+".transaction";
 		item.addAttribute("key", key);
 		item.addAttribute("value_type", "0");
-		String desc = HOST_NAME+"_罐"+g.getCan().getId()+"_枪"+g.getId()+"的交易记录";
+		String desc = host_name+"_罐"+g.getCan().getId()+"_枪"+g.getId()+"的交易记录";
 		item.addElement("description").addText(desc);
 		addOtherChilds(item);
 		item.element("delay").setText("60");
 	}
 
-	private static void createCardnoItem(Element items) {
+	private void createCardnoItem(Element items) {
 		Element item = items.addElement("item");
 		item.addAttribute("type", "2");	// trapper
 		item.addAttribute("key","cardno");
@@ -120,14 +124,14 @@ public class CreateHostConf {
 		item.element("delay").setText("60");	// 没有主动设置这个，应该是默认配置
 	}
 
-	private static void createProfitLossItem(Element items, Can c) {
+	private void createProfitLossItem(Element items, Can c) {
 		Element item = items.addElement("item");
 		item.addAttribute("type", "15");	// calculated
 		String key = "can"+c.getId()+".sale_profit_loss";
 		item.addAttribute("key", key);
 		item.addAttribute("value_type", "0");	// 数据类型是float
 		// 2
-		String desc = HOST_NAME+"_罐"+c.getId()+"的付油损益";
+		String desc = host_name+"_罐"+c.getId()+"的付油损益";
 		item.addElement("description").addText(desc);
 		addOtherChilds(item);		
 		item.element("delay").setText("1800");
@@ -140,7 +144,7 @@ public class CreateHostConf {
 	 * @param c
 	 * @return
 	 */
-	private static String createCalculatedParams(Can c) {
+	private String createCalculatedParams(Can c) {
 		StringBuilder sb = new StringBuilder();
 		for(Gun g:c.getGuns()){
 			sb.append("delta(can"+c.getId()+".gun"+g.getId()+".pump,3600)+");
@@ -150,7 +154,7 @@ public class CreateHostConf {
 		return sb.toString();
 	}
 
-	private static void createGunItem(String param, Element items, Gun g) {
+	private void createGunItem(String param, Element items, Gun g) {
 		Element item = items.addElement("item");
 		item.addAttribute("type", "7");	// 罐监控都是 zabbix_agent active
 		String key = "can"+g.getCan().getId()+".gun"+g.getId()+"."+param;
@@ -163,12 +167,12 @@ public class CreateHostConf {
 		}else{
 			param_zn = "泵码值";
 		}
-		String desc = HOST_NAME+"_罐"+g.getCan().getId()+"_枪"+g.getId()+"的"+param_zn;
+		String desc = host_name+"_罐"+g.getCan().getId()+"_枪"+g.getId()+"的"+param_zn;
 		item.addElement("description").addText(desc);
 		addOtherChilds(item);		
 	}
 
-	private static void createCanItem(String param, Element items,Can c) {
+	private void createCanItem(String param, Element items,Can c) {
 		Element item = items.addElement("item");
 		item.addAttribute("type", "7");	// 罐监控都是 zabbix_agent active
 		String key = "can"+c.getId()+"."+param;
@@ -187,7 +191,7 @@ public class CreateHostConf {
 		}else{
 			param_zn = "温度";
 		}
-		String desc = HOST_NAME+"_罐"+c.getId()+"的"+param_zn;
+		String desc = host_name+"_罐"+c.getId()+"的"+param_zn;
 		item.addElement("description").addText(desc);
 		addOtherChilds(item);
 	}
@@ -196,7 +200,7 @@ public class CreateHostConf {
 	 * can or gun items中共同的部分
 	 * @param item
 	 */
-	private static void addOtherChilds(Element item) {
+	private void addOtherChilds(Element item) {
 		item.addElement("ipmi_sensor");
 		item.addElement("delay").addText("30");
 		item.addElement("history").addText("90");
@@ -236,7 +240,7 @@ public class CreateHostConf {
 	 * @param outFile
 	 *            文件存放的地址
 	 */
-	public static void writeDocument(Document document, String outFile) {
+	public void writeDocument(Document document, String outFile) {
 		try {
 			// 读取文件
 			FileWriter fileWriter = new FileWriter(outFile);
@@ -249,61 +253,10 @@ public class CreateHostConf {
 			xmlWriter.write(document);
 			// 关闭
 			xmlWriter.close();
-			System.out.println("completed");
+			System.out.println("write to xml completed");
 		} catch (IOException e) {
 			System.out.println("文件没有找到");
 			e.printStackTrace();
 		}
 	}
-
-	public static void main(String[] args) {
-		List<Can> cans = new ArrayList<Can>();
-		
-		//test data
-		Can c1 = new Can(1);
-		Can c3 = new Can(3);
-		Can c4 = new Can(4);
-		
-		Gun g1 = new Gun(1);
-		Gun g2 = new Gun(2);
-		Gun g3 = new Gun(3);
-		Gun g4 = new Gun(4);
-		Gun g5 = new Gun(5);
-		Gun g6 = new Gun(6);
-		Gun g8 = new Gun(8);
-		Gun g9 = new Gun(9);
-		Gun g11 = new Gun(11);
-		Gun g12 = new Gun(12);
-		Gun g13 = new Gun(13);
-		Gun g14 = new Gun(14);
-		Gun g15 = new Gun(15);
-		
-		List<Gun> guns1 = new ArrayList<Gun>();		
-		List<Gun> guns2 = new ArrayList<Gun>();
-		List<Gun> guns3 = new ArrayList<Gun>();
-		guns1.add(g2);
-		guns1.add(g3);
-		guns1.add(g8);
-		guns1.add(g13);
-		guns2.add(g1);
-		guns2.add(g4);
-		guns2.add(g5);
-		guns2.add(g6);
-		guns2.add(g11);
-		guns2.add(g15);
-		guns3.add(g9);
-		guns3.add(g12);
-		guns3.add(g14);
-		
-		c1.setGuns(guns1);
-		c3.setGuns(guns2);
-		c4.setGuns(guns3);
-		cans.add(c1);
-		cans.add(c3);
-		cans.add(c4);
-		
-//		System.out.println(createCalculatedParams(c1));
-		writeDocument(getDocument(cans), "d:/test.xml");
-	}
-
 }
