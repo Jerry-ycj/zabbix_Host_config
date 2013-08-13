@@ -3,6 +3,7 @@ package hostconfig;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
+import java.util.Random;
 
 import org.dom4j.Document;
 import org.dom4j.DocumentHelper;
@@ -14,6 +15,8 @@ public class CreateHostConf {
 	private String host_name;
 	private String ip;
 	private List<Can> cans;
+	private static String COLOR[]={"0000DD","00DD00","DD0000","00DDDD",
+		"DD00DD","DDDD00","777777","550000","550055"};
 	
 	public CreateHostConf(String host_name,String ip,List<Can> cans){
 		this.host_name = host_name;
@@ -86,11 +89,118 @@ public class CreateHostConf {
 		}
 		// cardno 在 items中
 		createCardnoItem(items);
+		// graphs
+		createPLGraph(graphs); 	// 损益曲线-总
+		createVolumeGraph(graphs);	// 油罐库存_总
+		createTmpGraph(graphs);	// 油温曲线_总
+		createPumpSpeedGraph(graphs);	//出油速度
 		// macro
 		createMacros(macros);
 		return document;
 	}
 
+	private void createPumpSpeedGraph(Element graphs) {
+		for(Can c:cans){
+			Element g = graphs.addElement("graph");
+			g.addAttribute("name", "出油速度_罐"+c.getId());
+			addGraphOtherChild(g);
+			g.element("show_triggers").setText("0");
+			Element ges =  g.addElement("graph_elements");
+			for(int i=0;i<c.getGuns().size();i++){
+				Gun gun = c.getGuns().get(i);
+				Element ge = ges.addElement("graph_element");
+				ge.addAttribute("item", host_name+":gun"+gun.getId()+".pumpspeed");
+				ge.addElement("drawtype").addText("2");
+				ge.addElement("sortorder").addText(new StringBuilder().append(i).toString());
+				ge.addElement("color").addText(COLOR[i]);
+				ge.addElement("yaxisside").addText("0");
+				ge.addElement("calc_fnc").addText("2");
+				ge.addElement("type").addText("0");
+				ge.addElement("periods_cnt").addText("5");
+			}
+		}
+	}
+
+	private void createTmpGraph(Element graphs) {
+		Element g = graphs.addElement("graph");
+		g.addAttribute("name", "油温曲线_总");
+		addGraphOtherChild(g);
+		g.element("ymin_type").setText("1");
+		Element ges =  g.addElement("graph_elements");
+		for(int i=0;i<cans.size();i++){
+			Can c = cans.get(i);
+			Element ge = ges.addElement("graph_element");
+			ge.addAttribute("item", host_name+":can"+c.getId()+".temp");
+			ge.addElement("drawtype").addText("2");
+			ge.addElement("sortorder").addText(new StringBuilder().append(i).toString());
+			ge.addElement("color").addText(COLOR[i]);
+			ge.addElement("yaxisside").addText("0");
+			ge.addElement("calc_fnc").addText("2");
+			ge.addElement("type").addText("0");
+			ge.addElement("periods_cnt").addText("5");
+		}
+		
+	}
+
+	private void createVolumeGraph(Element graphs) {
+		Element g = graphs.addElement("graph");
+		g.addAttribute("name", "油罐库存_总");
+		addGraphOtherChild(g);
+		g.element("show_work_period").setText("1");
+		g.element("show_triggers").setText("0");
+		Element ges =  g.addElement("graph_elements");
+		for(int i=0;i<cans.size();i++){
+			Can c = cans.get(i);
+			Element ge = ges.addElement("graph_element");
+			ge.addAttribute("item", host_name+":can"+c.getId()+".volume");
+			ge.addElement("drawtype").addText("2");
+			ge.addElement("sortorder").addText(new StringBuilder().append(i).toString());
+			ge.addElement("color").addText(COLOR[i]);
+			ge.addElement("yaxisside").addText("0");
+			ge.addElement("calc_fnc").addText("2");
+			ge.addElement("type").addText("0");
+			ge.addElement("periods_cnt").addText("5");
+		}
+	}
+
+	private void createPLGraph(Element graphs) {
+		// 损益曲线-总
+		Element g = graphs.addElement("graph");
+		g.addAttribute("name", "损益曲线_总");
+		addGraphOtherChild(g);
+		Element ges =  g.addElement("graph_elements");
+		for(int i=0;i<cans.size();i++){
+			Can c = cans.get(i);
+			Element ge = ges.addElement("graph_element");
+			ge.addAttribute("item", host_name+":can"+c.getId()+".sale_profit_loss");
+			ge.addElement("drawtype").addText("2");
+			ge.addElement("sortorder").addText(new StringBuilder().append(i).toString());
+			ge.addElement("color").addText(COLOR[i]);
+			ge.addElement("yaxisside").addText("0");
+			ge.addElement("calc_fnc").addText("2");
+			ge.addElement("type").addText("0");
+			ge.addElement("periods_cnt").addText("5");
+		}
+	}
+
+	private void addGraphOtherChild(Element g){
+		g.addAttribute("width", "900");
+		g.addAttribute("height", "200");
+		g.addElement("ymin_type").addText("0");
+		g.addElement("ymax_type").addText("0");
+		g.addElement("ymin_item_key");
+		g.addElement("ymax_item_key");
+		g.addElement("show_work_period").addText("0");
+		g.addElement("show_triggers").addText("1");
+		g.addElement("graphtype").addText("0");
+		g.addElement("yaxismin").addText("0.0000");
+		g.addElement("yaxismax").addText("100.0000");
+		g.addElement("show_legend").addText("0");
+		g.addElement("show_3d").addText("0");
+		g.addElement("percent_left").addText("0.0000");
+		g.addElement("percent_right").addText("0.0000");
+	}
+	
 	private void createMacros(Element macros) {
 		Element macro = macros.addElement("macro");
 		macro.addElement("value").addText("900");
