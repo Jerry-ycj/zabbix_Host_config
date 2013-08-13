@@ -13,13 +13,15 @@ import org.dom4j.io.XMLWriter;
 public class CreateHostConf {
 	private String host_name;
 	private String ip;
+	private List<Can> cans;
 	
-	public CreateHostConf(String host_name,String ip){
+	public CreateHostConf(String host_name,String ip,List<Can> cans){
 		this.host_name = host_name;
 		this.ip = ip;
+		this.cans = cans;
 	}
 	
-	public Document getDocument(List<Can> cans) {
+	public Document getDocument() {
 		// 生成一个节点
 		Document document = DocumentHelper.createDocument();
 		// root
@@ -54,45 +56,74 @@ public class CreateHostConf {
 		Element graphs = host.addElement("graphs");
 		Element macros = host.addElement("macros");
 		// 5
-		// item can 1can/5items
+		// item can 1can/5items;trigger
 		for(Can c:cans){
 			createCanItem("volume",items,c);
 			createCanItem("height", items, c);
 			createCanItem("water", items, c);
 			createCanItem("watervolume", items, c);
 			createCanItem("temp", items, c);
-			// 0-超高，1-超低
-			createCanTrigger(0,triggers,c);
-			createCanTrigger(1,triggers,c);
+			// 0-超高，1-超低，不同级别告警
+			createCanHightTrigger(0,0,triggers,c);
+			createCanHightTrigger(0,1,triggers,c);
+			createCanHightTrigger(0,2,triggers,c);
+			createCanHightTrigger(1,0,triggers,c);
+			createCanHightTrigger(1,1,triggers,c);
+			createCanHightTrigger(1,2,triggers,c);
+			// 损益告警
+			createPLTrigger(triggers,c);
+			// 卸油告警
+			createUnloadTrigger(triggers,c);
 			// item gun
 			for(Gun g:c.getGuns()){
 				createGunItem("volume",items,g);
 				createGunItem("pump", items, g);
-				// item transaction/gun
 				createTransactionItem(items,g);
+				createPumpSpeedItem(items,g);
 			}
 			// item sale_profit_loss
 			createProfitLossItem(items,c);
-			
 		}
 		// cardno 在 items中
-		createCardnoItem(items);		
+		createCardnoItem(items);
+		// macro
+		createMacros(macros);
 		return document;
 	}
 
-	private void createCanTrigger(int i, Element triggers,Can c) {
+	private void createMacros(Element macros) {
+		Element macro = macros.addElement("macro");
+		macro.addElement("value").addText("900");
+		macro.addElement("name").addText("{$HIGHT_HIGH1}");
+		macro = macros.addElement("macro");
+		macro.addElement("value").addText("1000");
+		macro.addElement("name").addText("{$HIGHT_HIGH2}");
+		macro = macros.addElement("macro");
+		macro.addElement("value").addText("250");
+		macro.addElement("name").addText("{$HIGHT_LOW1}");
+		macro = macros.addElement("macro");
+		macro.addElement("value").addText("200");
+		macro.addElement("name").addText("{$HIGHT_LOW2}");		
+	}
+
+	private void createUnloadTrigger(Element triggers, Can c) {
 		Element trigger = triggers.addElement("trigger");
-		// 2
-		String param;
-		String exp;	//表达式
-		if(i==0){
-			param = "超高";
-			exp = "{"+host_name+":can"+c.getId()+".height.last(0)}>900";	// 注意>等不用人为转义
-		}else{
-			param = "超低";
-			exp = "{"+host_name+":can"+c.getId()+".height.last(0)}<250";
-		}
-		String desc = host_name+"_罐"+c.getId()+"液位"+param+"告警";
+		String desc = host_name+"_罐"+c.getId()+"卸油异常";
+		// {TanGu:can1.volume.delta(7200)}>1000  两小时增加1000l
+		String exp = "{"+host_name+":can"+c.getId()+".volume.delta(7200)}>1000";
+		trigger.addElement("description").addText(desc);
+		trigger.addElement("type").addText("0");
+		trigger.addElement("expression").addText(exp);
+		trigger.addElement("url");
+		trigger.addElement("status").addText("0");
+		trigger.addElement("priority").addText("3");
+		trigger.addElement("comments");
+	}
+
+	private void createPLTrigger(Element triggers, Can c) {
+		Element trigger = triggers.addElement("trigger");
+		String desc = host_name+"_罐"+c.getId()+"损益告警 当前={ITEM.LASTVALUE}";
+		String exp = "{"+host_name+":can"+c.getId()+".sale_profit_loss.last(0)}<-50";
 		trigger.addElement("description").addText(desc);
 		trigger.addElement("type").addText("0");
 		trigger.addElement("expression").addText(exp);
@@ -102,6 +133,92 @@ public class CreateHostConf {
 		trigger.addElement("comments");
 	}
 
+	private void createCanHightTrigger(int i, int level, Element triggers,Can c) {
+		Element trigger = triggers.addElement("trigger");
+		String levels[] = {"警告","一般严重","严重"};
+		String priority = getPriority(level);		
+		// 2
+		String param;
+		String exp;	//表达式
+		if(i==0){
+			param = "超高";
+			exp = getHightTriggerExp(level,i,c);
+		}else{
+			param = "超低";
+			exp = getHightTriggerExp(level,i,c);
+		}
+		String desc = host_name+"_罐"+c.getId()+"液位"+param+"-"+levels[level]+" 当前={ITEM.LASTVALUE}";
+		trigger.addElement("description").addText(desc);
+		trigger.addElement("type").addText("0");
+		trigger.addElement("expression").addText(exp);
+		trigger.addElement("url");
+		trigger.addElement("status").addText("0");
+		trigger.addElement("priority").addText(priority);
+		trigger.addElement("comments");
+	}
+
+	private String getHightTriggerExp(int level, int i,Can c) {
+	// 超高超低警告表达式，根据级别
+		String exp;
+		if(i==0){
+			if(level==0){
+				// ({TanGu:can1.height.last(0)}>{$HIGHT_HIGH1}&{TanGu:can1.height.last(0)}<{$HIGHT_HIGH2})|{TanGu:can1.height.last(0)}={$HIGHT_HIGH2}
+				exp = "({"+host_name+":can"+c.getId()+".height.last(0)}>{$HIGHT_HIGH1}&{"
+						+host_name+":can"+c.getId()+".height.last(0)}<{$HIGHT_HIGH2})|{"
+						+host_name+":can"+c.getId()+".height.last(0)}={$HIGHT_HIGH2}";	// 注意>等不用人为转义
+			}else if(level==1){
+				// {TanGu:can1.height.last(0)}>{$HIGHT_HIGH2}
+				exp = "{"+host_name+":can"+c.getId()+".height.last(0)}>{$HIGHT_HIGH2}";
+			}else{
+				// {TanGu:can1.height.min(#10)}>{$HIGHT_HIGH2}
+				exp = "{"+host_name+":can"+c.getId()+".height.min(#10)}>{$HIGHT_HIGH2}";
+			}
+		}else{
+			if(level==0){
+				// ({TanGu:can1.height.last(0)}<{$HIGHT_LOW1}&{TanGu:can1.height.last(0)}>{$HIGHT_LOW2})|{TanGu:can1.height.last(0)}={$HIGHT_LOW2}
+				exp = "({"+host_name+":can"+c.getId()+".height.last(0)}<{$HIGHT_LOW1}&{"
+						+host_name+":can"+c.getId()+".height.last(0)}>{$HIGHT_LOW2})|{"
+						+host_name+":can"+c.getId()+".height.last(0)}={$HIGHT_LOW2}";
+			}else if(level==1){
+				// {TanGu:can1.height.last(0)}<{$HIGHT_LOW2}
+				exp = "{"+host_name+":can"+c.getId()+".height.last(0)}<{$HIGHT_LOW2}";
+			}else{
+				// {TanGu:can1.height.max(#10)}<{$HIGHT_LOW2}
+				// 采集的10次数据(5min)最大小于200
+				exp = "{"+host_name+":can"+c.getId()+".height.max(#10)}<{$HIGHT_LOW2}";
+			}
+		}
+		return exp;
+	}
+
+	private String getPriority(int level) {
+	// trigger 的 警告级别
+		String priority;
+		if(level==0){
+			priority = "2";
+		}else if(level==1){
+			priority = "3";
+		}else{
+			priority = "4";
+		}
+		return priority;
+	}
+
+	private void createPumpSpeedItem(Element items, Gun g){
+		Element item = items.addElement("item");
+		item.addAttribute("type", "15");	// calculated
+		String key = "gun"+g.getId()+".pumpspeed";
+		item.addAttribute("key", key);
+		item.addAttribute("value_type", "0");
+		String desc = host_name+"_罐"+g.getCan().getId()+"_枪"+g.getId()+"的出油速度";
+		item.addElement("description").addText(desc);
+		addOtherChilds(item);
+		item.element("params").setText("change(can"+g.getCan().getId()
+				+".gun"+g.getId()+".pump)");
+		Element app = item.addElement("applications").addElement("application");
+		app.addText(host_name+"_Gun");
+	}
+	
 	private void createTransactionItem(Element items, Gun g) {
 		Element item = items.addElement("item");
 		item.addAttribute("type", "2");	// trapper
@@ -112,6 +229,8 @@ public class CreateHostConf {
 		item.addElement("description").addText(desc);
 		addOtherChilds(item);
 		item.element("delay").setText("60");
+		Element app = item.addElement("applications").addElement("application");
+		app.addText(host_name+"_Gun");
 	}
 
 	private void createCardnoItem(Element items) {
@@ -122,6 +241,7 @@ public class CreateHostConf {
 		item.addElement("description").addText("卡号");
 		addOtherChilds(item);
 		item.element("delay").setText("60");	// 没有主动设置这个，应该是默认配置
+		item.addElement("applications");
 	}
 
 	private void createProfitLossItem(Element items, Can c) {
@@ -135,8 +255,11 @@ public class CreateHostConf {
 		item.addElement("description").addText(desc);
 		addOtherChilds(item);		
 		item.element("delay").setText("1800");
-		String params = createCalculatedParams(c);
+		String params = createProfitLossParams(c);
 		item.element("params").setText(params);
+		item.element("units").setText("L");
+		Element app = item.addElement("applications").addElement("application");
+		app.addText(host_name+"_Can"+c.getId());
 	}
 
 	/**
@@ -144,12 +267,12 @@ public class CreateHostConf {
 	 * @param c
 	 * @return
 	 */
-	private String createCalculatedParams(Can c) {
+	private String createProfitLossParams(Can c) {
 		StringBuilder sb = new StringBuilder();
 		for(Gun g:c.getGuns()){
 			sb.append("delta(can"+c.getId()+".gun"+g.getId()+".pump,3600)+");
 		}
-		sb.deleteCharAt(sb.length()-1);
+		sb.deleteCharAt(sb.length()-1); // 去掉最后的+
 		sb.append("-delta(can"+c.getId()+".volume,3600)");
 		return sb.toString();
 	}
@@ -169,7 +292,9 @@ public class CreateHostConf {
 		}
 		String desc = host_name+"_罐"+g.getCan().getId()+"_枪"+g.getId()+"的"+param_zn;
 		item.addElement("description").addText(desc);
-		addOtherChilds(item);		
+		addOtherChilds(item);	
+		Element app = item.addElement("applications").addElement("application");
+		app.addText(host_name+"_Can"+g.getCan().getId());
 	}
 
 	private void createCanItem(String param, Element items,Can c) {
@@ -194,6 +319,9 @@ public class CreateHostConf {
 		String desc = host_name+"_罐"+c.getId()+"的"+param_zn;
 		item.addElement("description").addText(desc);
 		addOtherChilds(item);
+		// 分别放入指定app
+		Element app = item.addElement("applications").addElement("application");
+		app.addText(host_name+"_Can"+c.getId());
 	}
 
 	/**
@@ -229,7 +357,7 @@ public class CreateHostConf {
 		item.addElement("snmpv3_authpassphrase");
 		item.addElement("snmpv3_privpassphrase");
 		item.addElement("valuemapid").addText("0");
-		item.addElement("applications");		
+		
 	}
 
 	/**

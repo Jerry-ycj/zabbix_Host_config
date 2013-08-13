@@ -13,18 +13,20 @@ public class Configuration {
 	private String host_name;
 	private String ip;
 	private List<Can> cans;
+	private String filePath; 
 	
 	public Configuration(){}
 	
-	public void load() throws Exception{
+	public void load(String filename) throws Exception{
 		// src下
-		InputStream in = this.getClass().getClassLoader().getResourceAsStream("hostconfig/conf/host.properties");
+		InputStream in = this.getClass().getClassLoader().getResourceAsStream(filename);
 		Properties pro = new Properties();
 		pro.load(in);
 		host_name = pro.getProperty("host_name");
 		ip = pro.getProperty("ip");
 		String can_gun = pro.getProperty("can_gun");
 		cans = parseCan_Gun(can_gun);
+		filePath = pro.getProperty("filePath");
 	}
 
 	private List<Can> parseCan_Gun(String can_gun) {
@@ -68,6 +70,14 @@ public class Configuration {
 
 	public void setCans(List<Can> cans) {
 		this.cans = cans;
+	}
+
+	public String getFilePath() {
+		return filePath;
+	}
+
+	public void setFilePath(String filePath) {
+		this.filePath = filePath;
 	}
 	
 }
