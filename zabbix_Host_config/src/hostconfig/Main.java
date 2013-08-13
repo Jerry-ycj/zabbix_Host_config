@@ -3,7 +3,6 @@ package hostconfig;
 import hostconfig.conf.Configuration;
 
 import java.util.List;
-
 import org.dom4j.Document;
 
 public class Main {
@@ -23,7 +22,7 @@ public class Main {
 		// create xml
 		CreateHostConf factory = new CreateHostConf(host_name, ip);
 		Document root = factory.getDocument(cans);
-		factory.writeDocument(root, "d:/test2.xml");
+		factory.writeDocument(root, "d:/testv1.xml");
 			
 //		for(Can c:cans){
 //			System.out.print(c.getId()+":");
