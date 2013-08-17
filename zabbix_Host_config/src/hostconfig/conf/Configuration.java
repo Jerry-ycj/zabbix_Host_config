@@ -3,8 +3,8 @@ package hostconfig.conf;
 import hostconfig.Can;
 import hostconfig.Gun;
 
-import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -13,20 +13,26 @@ public class Configuration {
 	private String host_name;
 	private String ip;
 	private List<Can> cans;
-	private String filePath; 
+	private String filePath;
+	private String groups[];
+	private String host_name_cn;
 	
 	public Configuration(){}
 	
 	public void load(String filename) throws Exception{
 		// src下
 		InputStream in = this.getClass().getClassLoader().getResourceAsStream(filename);
+		// 因为流默认读取iso-8859-1，可以用reader
+		InputStreamReader in_utf8= new InputStreamReader(in, "utf-8");
 		Properties pro = new Properties();
-		pro.load(in);
+		pro.load(in_utf8);
 		host_name = pro.getProperty("host_name");
 		ip = pro.getProperty("ip");
 		String can_gun = pro.getProperty("can_gun");
 		cans = parseCan_Gun(can_gun);
 		filePath = pro.getProperty("filePath");
+		groups = pro.getProperty("groups").split(";");
+		host_name_cn = pro.getProperty("host_name_cn");
 	}
 
 	private List<Can> parseCan_Gun(String can_gun) {
@@ -78,6 +84,22 @@ public class Configuration {
 
 	public void setFilePath(String filePath) {
 		this.filePath = filePath;
+	}
+
+	public String[] getGroups() {
+		return groups;
+	}
+
+	public void setGroups(String[] groups) {
+		this.groups = groups;
+	}
+
+	public String getHost_name_cn() {
+		return host_name_cn;
+	}
+
+	public void setHost_name_cn(String host_name_cn) {
+		this.host_name_cn = host_name_cn;
 	}
 	
 }

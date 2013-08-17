@@ -1,2 +1,4 @@
 eclipse.preferences.version=1
+encoding//src/hostconfig/conf/fenglin_host.properties=UTF-8
+encoding//src/hostconfig/conf/tangu_host.properties=UTF-8
 encoding/<project>=UTF-8
