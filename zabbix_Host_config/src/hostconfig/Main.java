@@ -17,27 +17,33 @@ import org.dom4j.Document;
  * 		trigger卸油异常表达式更改
  * 		trigger卸油开始、卸油结束
  * 		item volumespeed
- * 
+ * v1.2.3
+ * 		增加trigger 卸油进行中，取消卸油开始、结束
+ * 		超高超低trigger名称修改
  * @author ycj
  *
  */
 public class Main {
 	public static void main(String[] args) {
-		String config_file= "hostconfig/conf/fenglin_host.properties"; 
-		// init
-		Configuration conf = new Configuration();
-		try {
-			conf.load(config_file);
-		} catch (Exception e) {
-			System.out.println("初始化失败");
-			e.printStackTrace();
-			return;
+		String config_files[] = {"hostconfig/conf/tangu_host.properties","hostconfig/conf/fenglin_host.properties"};
+//		String config_file= "hostconfig/conf/fenglin_host.properties"; 
+//		String config_file= "hostconfig/conf/tangu_host.properties"; 
+		for(int i=0;i<config_files.length;i++){		
+			// init
+			Configuration conf = new Configuration();
+			try {
+				conf.load(config_files[i]);
+			} catch (Exception e) {
+				System.out.println("初始化失败");
+				e.printStackTrace();
+				return;
+			}
+			
+			String filepath = conf.getFilePath();
+			// create xml
+			CreateHostConf factory = new CreateHostConf(conf);
+			Document root = factory.getDocument();
+			factory.writeDocument(root, filepath);
 		}
-		
-		String filepath = conf.getFilePath();
-		// create xml
-		CreateHostConf factory = new CreateHostConf(conf);
-		Document root = factory.getDocument();
-		factory.writeDocument(root, filepath);
 	}
 }

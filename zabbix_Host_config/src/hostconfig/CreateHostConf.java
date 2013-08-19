@@ -77,14 +77,12 @@ public class CreateHostConf {
 			createCanHightTrigger(1,0,triggers,c);
 			createCanHightTrigger(1,1,triggers,c);
 			createCanHightTrigger(1,2,triggers,c);
-			// 损益告警
+			// 损溢告警
 			createPLTrigger(triggers,c);
 			// 卸油告警
 			createUnloadTrigger(triggers,c);
-			// 卸油开始
-			createUnloadStartTrigger(triggers,c);
-			// 卸油结束
-			createUnloadEndTrigger(triggers,c);
+			// 卸油进行中
+			createUnloadIngTrigger(triggers,c);
 			// item gun
 			for(Gun g:c.getGuns()){
 				createGunItem("volume",items,g);
@@ -96,7 +94,7 @@ public class CreateHostConf {
 		// cardno 在 items中
 		createCardnoItem(items);
 		// graphs
-		createPLGraph(graphs); 	// 损益曲线-总
+		createPLGraph(graphs); 	// 损溢曲线-总
 		createVolumeGraph(graphs);	// 油罐库存_总
 		createTmpGraph(graphs);	// 油温曲线_总
 		createPumpSpeedGraph(graphs);	//出油速度
@@ -108,7 +106,7 @@ public class CreateHostConf {
 	private void createPumpSpeedGraph(Element graphs) {
 		for(Can c:conf.getCans()){
 			Element g = graphs.addElement("graph");
-			g.addAttribute("name", "出油速度_罐"+c.getId());
+			g.addAttribute("name", c.getId()+"号罐油枪出油");
 			addGraphOtherChild(g);
 			g.element("show_triggers").setText("0");
 			Element ges =  g.addElement("graph_elements");
@@ -170,9 +168,9 @@ public class CreateHostConf {
 	}
 
 	private void createPLGraph(Element graphs) {
-		// 损益曲线-总
+		// 损溢曲线-总
 		Element g = graphs.addElement("graph");
-		g.addAttribute("name", "损益曲线_总");
+		g.addAttribute("name", "损溢曲线_总");
 		addGraphOtherChild(g);
 		Element ges =  g.addElement("graph_elements");
 		for(int i=0;i<conf.getCans().size();i++){
@@ -209,10 +207,10 @@ public class CreateHostConf {
 	
 	private void createMacros(Element macros) {
 		Element macro = macros.addElement("macro");
-		macro.addElement("value").addText("900");
+		macro.addElement("value").addText("1500");
 		macro.addElement("name").addText("{$HIGHT_HIGH1}");
 		macro = macros.addElement("macro");
-		macro.addElement("value").addText("1000");
+		macro.addElement("value").addText("2000");
 		macro.addElement("name").addText("{$HIGHT_HIGH2}");
 		macro = macros.addElement("macro");
 		macro.addElement("value").addText("250");
@@ -222,9 +220,26 @@ public class CreateHostConf {
 		macro.addElement("name").addText("{$HIGHT_LOW2}");		
 	}
 
+	private void createUnloadIngTrigger(Element triggers,Can c){
+		Element trigger = triggers.addElement("trigger");
+		String desc = c.getId()+"号罐卸油进行中";
+		// ({TanGu:can1.volume.last(0)}-{TanGu:can1.volume.avg(300)})>5|({TRIGGER.VALUE}=1&({TanGu:can1.volume.last(0)}-{TanGu:can1.volume.avg(300)})>-5)
+		String exp = "({"+conf.getHost_name()+":can"+c.getId()+".volume.last(0)}-{"
+				+conf.getHost_name()+":can"+c.getId()+".volume.avg(300)})>5|({TRIGGER.VALUE}=1&({"
+				+conf.getHost_name()+":can"+c.getId()+".volume.last(0)}-{"
+				+conf.getHost_name()+":can"+c.getId()+".volume.avg(300)})>-5)";
+		trigger.addElement("description").addText(desc);
+		trigger.addElement("type").addText("0");
+		trigger.addElement("expression").addText(exp);
+		trigger.addElement("url");
+		trigger.addElement("status").addText("0");
+		trigger.addElement("priority").addText("1");
+		trigger.addElement("comments");
+	}
+	
 	private void createUnloadEndTrigger(Element triggers,Can c){
 		Element trigger = triggers.addElement("trigger");
-		String desc = conf.getHost_name_cn()+c.getId()+"号罐卸油结束";
+		String desc = c.getId()+"号罐卸油结束";
 		// ({TanGu:can1.volumespeed.prev(0)}>10|{TanGu:can1.volumespeed.prev(0)}=10)&{TanGu:can1.volumespeed.last(0)}<10
 		String exp = "({"+conf.getHost_name()+":can"+c.getId()+".volumespeed.prev(0)}>10|{"
 				+conf.getHost_name()+":can"+c.getId()+".volumespeed.prev(0)}=10)&{"
@@ -240,7 +255,7 @@ public class CreateHostConf {
 	
 	private void createUnloadStartTrigger(Element triggers,Can c){
 		Element trigger = triggers.addElement("trigger");
-		String desc = conf.getHost_name_cn()+c.getId()+"号罐卸油开始";
+		String desc = c.getId()+"号罐卸油开始";
 		// ({TanGu:can1.volumespeed.prev(0)}<10|{TanGu:can1.volumespeed.prev(0)}=10)&{TanGu:can1.volumespeed.last(0)}>10
 		String exp = "({"+conf.getHost_name()+":can"+c.getId()+".volumespeed.prev(0)}<10|{"
 				+conf.getHost_name()+":can"+c.getId()+".volumespeed.prev(0)}=10)&{"
@@ -256,7 +271,7 @@ public class CreateHostConf {
 	
 	private void createUnloadTrigger(Element triggers, Can c) {
 		Element trigger = triggers.addElement("trigger");
-		String desc = conf.getHost_name_cn()+c.getId()+"号罐卸油异常";
+		String desc = c.getId()+"号罐卸油异常";
 		// ({TanGu:can1.volume.last(0)}-{TanGu:can1.volume.min(7200)})>1000  两小时增加1000l
 		String exp = "({"+conf.getHost_name()+":can"+c.getId()+".volume.last(0)}-{"
 				+conf.getHost_name()+":can"+c.getId()+".volume.min(7200)})>1000";
@@ -265,13 +280,13 @@ public class CreateHostConf {
 		trigger.addElement("expression").addText(exp);
 		trigger.addElement("url");
 		trigger.addElement("status").addText("0");
-		trigger.addElement("priority").addText("3");
+		trigger.addElement("priority").addText("2");
 		trigger.addElement("comments");
 	}
 
 	private void createPLTrigger(Element triggers, Can c) {
 		Element trigger = triggers.addElement("trigger");
-		String desc = conf.getHost_name_cn()+c.getId()+"号罐损益告警 当前={ITEM.LASTVALUE}";
+		String desc = c.getId()+"号罐损溢告警-当前={ITEM.LASTVALUE}";
 		String exp = "{"+conf.getHost_name()+":can"+c.getId()+".sale_profit_loss.last(0)}<-10";
 		trigger.addElement("description").addText(desc);
 		trigger.addElement("type").addText("0");
@@ -296,7 +311,8 @@ public class CreateHostConf {
 			param = "超低";
 			exp = getHightTriggerExp(level,i,c);
 		}
-		String desc = conf.getHost_name_cn()+c.getId()+"号罐液位"+param+"-"+levels[level]+" 当前={ITEM.LASTVALUE}";
+		String desc = c.getId()+"号罐"+param;
+//		String desc = c.getId()+"号罐液位"+param+" 当前={ITEM.LASTVALUE}";
 		trigger.addElement("description").addText(desc);
 		trigger.addElement("type").addText("0");
 		trigger.addElement("expression").addText(exp);
@@ -307,7 +323,7 @@ public class CreateHostConf {
 	}
 
 	private String getHightTriggerExp(int level, int i,Can c) {
-	// 超高超低警告表达式，根据级别
+	// 超高超低警告表达式，根据级别  0-警告,2-严重，3-灾难
 		String exp;
 		if(i==0){
 			if(level==0){
@@ -346,9 +362,9 @@ public class CreateHostConf {
 		if(level==0){
 			priority = "2";
 		}else if(level==1){
-			priority = "3";
-		}else{
 			priority = "4";
+		}else{
+			priority = "5";
 		}
 		return priority;
 	}
@@ -359,7 +375,7 @@ public class CreateHostConf {
 		String key = "gun"+g.getId()+".pumpspeed";
 		item.addAttribute("key", key);
 		item.addAttribute("value_type", "0");
-		String desc = conf.getHost_name_cn()+g.getId()+"号枪的出油速度";
+		String desc = g.getId()+"号枪出油速度";
 		item.addElement("description").addText(desc);
 		addOtherChilds(item);
 		item.element("params").setText("change(can"+g.getCan().getId()
@@ -374,7 +390,7 @@ public class CreateHostConf {
 		String key = "gun"+g.getId()+".transaction";
 		item.addAttribute("key", key);
 		item.addAttribute("value_type", "0");
-		String desc = conf.getHost_name_cn()+g.getId()+"号枪的交易记录";
+		String desc = g.getId()+"号枪交易记录";
 		item.addElement("description").addText(desc);
 		addOtherChilds(item);
 		item.element("delay").setText("60");
@@ -400,7 +416,7 @@ public class CreateHostConf {
 		item.addAttribute("key", key);
 		item.addAttribute("value_type", "0");	// 数据类型是float
 		// 2
-		String desc = conf.getHost_name_cn()+c.getId()+"号罐的库存变化";
+		String desc = c.getId()+"号罐库存变化";
 		item.addElement("description").addText(desc);
 		addOtherChilds(item);
 		item.element("params").setText("change(can"+c.getId()+".volume)");
@@ -415,7 +431,7 @@ public class CreateHostConf {
 		item.addAttribute("key", key);
 		item.addAttribute("value_type", "0");	// 数据类型是float
 		// 2
-		String desc = conf.getHost_name_cn()+c.getId()+"号罐的付油损益";
+		String desc = c.getId()+"号罐付油损溢";
 		item.addElement("description").addText(desc);
 		addOtherChilds(item);		
 		item.element("delay").setText("1800");
@@ -427,7 +443,7 @@ public class CreateHostConf {
 	}
 
 	/**
-	 *  计算损益时的表达式
+	 *  计算损溢时的表达式
 	 * @param c
 	 * @return
 	 */
@@ -457,7 +473,7 @@ public class CreateHostConf {
 		}else{
 			param_zn = "泵码值";
 		}
-		String desc = conf.getHost_name_cn()+g.getId()+"号枪的"+param_zn;
+		String desc = g.getId()+"号枪的"+param_zn;
 		item.addElement("description").addText(desc);
 		addOtherChilds(item);	
 		Element app = item.addElement("applications").addElement("application");
@@ -483,7 +499,7 @@ public class CreateHostConf {
 		}else{
 			param_zn = "温度";
 		}
-		String desc = conf.getHost_name_cn()+c.getId()+"号罐的"+param_zn;
+		String desc = c.getId()+"号罐"+param_zn;
 		item.addElement("description").addText(desc);
 		addOtherChilds(item);
 		// 分别放入指定app
@@ -535,6 +551,7 @@ public class CreateHostConf {
 	 *            文件存放的地址
 	 */
 	public void writeDocument(Document document, String outFile) {
+		System.out.println("writing to "+outFile);
 		try {
 			// 读取文件
 			FileWriter fileWriter = new FileWriter(outFile);
@@ -547,7 +564,7 @@ public class CreateHostConf {
 			xmlWriter.write(document);
 			// 关闭
 			xmlWriter.close();
-			System.out.println("write to xml. completed");
+			System.out.println("Completed");
 		} catch (IOException e) {
 			System.out.println("文件没有找到");
 			e.printStackTrace();
