@@ -20,6 +20,10 @@ import org.dom4j.Document;
  * v1.2.3
  * 		增加trigger 卸油进行中，取消卸油开始、结束
  * 		超高超低trigger名称修改
+ * v1.2.4
+ * 		修改各trigger阈值
+ * 		增加卸油时付油trigger
+ * 		修改超高超低（迟滞）
  * @author ycj
  *
  */

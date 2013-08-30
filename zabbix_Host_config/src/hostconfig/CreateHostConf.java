@@ -70,19 +70,17 @@ public class CreateHostConf {
 			createProfitLossItem(items,c);
 			// item volumespeed
 			createVolumeSpeedItem(items,c);
-			// 0-超高，1-超低，不同级别告警
-			createCanHightTrigger(0,0,triggers,c);
-			createCanHightTrigger(0,1,triggers,c);
+			// 0-超高，1-超低，不同级别告警1,2,4,5
 			createCanHightTrigger(0,2,triggers,c);
-			createCanHightTrigger(1,0,triggers,c);
-			createCanHightTrigger(1,1,triggers,c);
-			createCanHightTrigger(1,2,triggers,c);
+			createCanHightTrigger(1,4,triggers,c);
 			// 损溢告警
 			createPLTrigger(triggers,c);
 			// 卸油告警
 			createUnloadTrigger(triggers,c);
 			// 卸油进行中
 			createUnloadIngTrigger(triggers,c);
+			//卸油时付油警告
+			createUnloadSaleTrigger(triggers,c);
 			// item gun
 			for(Gun g:c.getGuns()){
 				createGunItem("volume",items,g);
@@ -207,27 +205,49 @@ public class CreateHostConf {
 	
 	private void createMacros(Element macros) {
 		Element macro = macros.addElement("macro");
-		macro.addElement("value").addText("1500");
+		macro.addElement("value").addText("2300");
 		macro.addElement("name").addText("{$HIGHT_HIGH1}");
 		macro = macros.addElement("macro");
-		macro.addElement("value").addText("2000");
+		macro.addElement("value").addText("2295");
 		macro.addElement("name").addText("{$HIGHT_HIGH2}");
 		macro = macros.addElement("macro");
-		macro.addElement("value").addText("250");
+		macro.addElement("value").addText("260");
 		macro.addElement("name").addText("{$HIGHT_LOW1}");
 		macro = macros.addElement("macro");
-		macro.addElement("value").addText("200");
+		macro.addElement("value").addText("265");
 		macro.addElement("name").addText("{$HIGHT_LOW2}");		
 	}
 
+	private void createUnloadSaleTrigger(Element triggers,Can c){
+		Element trigger = triggers.addElement("trigger");
+		String desc = c.getId()+"号罐卸油时付油告警";
+		StringBuilder tmp = new StringBuilder();
+		for(Gun g:c.getGuns()){
+			tmp.append("{"+conf.getHost_name()+":gun"+g.getId()+".pumpspeed.last(0)}>5|");
+		}
+		tmp.deleteCharAt(tmp.length()-1);
+		String exp = "(({"+conf.getHost_name()+":can"+c.getId()+".volume.last(0)}-{"
+				+conf.getHost_name()+":can"+c.getId()+".volume.avg(240)})>10|({TRIGGER.VALUE}=1&({"
+				+conf.getHost_name()+":can"+c.getId()+".volume.last(0)}-{"
+				+conf.getHost_name()+":can"+c.getId()+".volume.avg(240)})>-5))&("
+				+tmp.toString()+")";
+		trigger.addElement("description").addText(desc);
+		trigger.addElement("type").addText("0");
+		trigger.addElement("expression").addText(exp);
+		trigger.addElement("url");
+		trigger.addElement("status").addText("0");
+		trigger.addElement("priority").addText("2");
+		trigger.addElement("comments");
+	}
+	
 	private void createUnloadIngTrigger(Element triggers,Can c){
 		Element trigger = triggers.addElement("trigger");
-		String desc = c.getId()+"号罐卸油进行中";
-		// ({TanGu:can1.volume.last(0)}-{TanGu:can1.volume.avg(300)})>5|({TRIGGER.VALUE}=1&({TanGu:can1.volume.last(0)}-{TanGu:can1.volume.avg(300)})>-5)
+		String desc = c.getId()+"号罐卸油进行中-当前={ITEM.LASTVALUE}";
+		// ({TanGu:can1.volume.last(0)}-{TanGu:can1.volume.avg(240)})>10|({TRIGGER.VALUE}=1&({TanGu:can1.volume.last(0)}-{TanGu:can1.volume.avg(240)})>-5)
 		String exp = "({"+conf.getHost_name()+":can"+c.getId()+".volume.last(0)}-{"
-				+conf.getHost_name()+":can"+c.getId()+".volume.avg(300)})>5|({TRIGGER.VALUE}=1&({"
+				+conf.getHost_name()+":can"+c.getId()+".volume.avg(240)})>10|({TRIGGER.VALUE}=1&({"
 				+conf.getHost_name()+":can"+c.getId()+".volume.last(0)}-{"
-				+conf.getHost_name()+":can"+c.getId()+".volume.avg(300)})>-5)";
+				+conf.getHost_name()+":can"+c.getId()+".volume.avg(240)})>-5)";
 		trigger.addElement("description").addText(desc);
 		trigger.addElement("type").addText("0");
 		trigger.addElement("expression").addText(exp);
@@ -297,19 +317,19 @@ public class CreateHostConf {
 		trigger.addElement("comments");
 	}
 
-	private void createCanHightTrigger(int i, int level, Element triggers,Can c) {
+	private void createCanHightTrigger(int i, int p, Element triggers,Can c) {
 		Element trigger = triggers.addElement("trigger");
-		String levels[] = {"一般","严重","紧急"};
-		String priority = getPriority(level);		
+//		String levels[] = {"一般","严重","紧急"};
+		String priority = new StringBuffer().append(p).toString();		
 		// 2
 		String param;
 		String exp;	//表达式
 		if(i==0){
 			param = "超高";
-			exp = getHightTriggerExp(level,i,c);
+			exp = getHightTriggerExp(i,c);
 		}else{
 			param = "超低";
-			exp = getHightTriggerExp(level,i,c);
+			exp = getHightTriggerExp(i,c);
 		}
 		String desc = c.getId()+"号罐"+param;
 //		String desc = c.getId()+"号罐液位"+param+" 当前={ITEM.LASTVALUE}";
@@ -322,51 +342,19 @@ public class CreateHostConf {
 		trigger.addElement("comments");
 	}
 
-	private String getHightTriggerExp(int level, int i,Can c) {
-	// 超高超低警告表达式，根据级别  0-警告,2-严重，3-灾难
+	private String getHightTriggerExp(int i,Can c) {
+	// 超高超低警告表达式
 		String exp;
-		if(i==0){
-			if(level==0){
-				// ({TanGu:can1.height.last(0)}>{$HIGHT_HIGH1}&{TanGu:can1.height.last(0)}<{$HIGHT_HIGH2})|{TanGu:can1.height.last(0)}={$HIGHT_HIGH2}
-				exp = "({"+conf.getHost_name()+":can"+c.getId()+".height.last(0)}>{$HIGHT_HIGH1}&{"
-						+conf.getHost_name()+":can"+c.getId()+".height.last(0)}<{$HIGHT_HIGH2})|{"
-						+conf.getHost_name()+":can"+c.getId()+".height.last(0)}={$HIGHT_HIGH2}";	// 注意>等不用人为转义
-			}else if(level==1){
-				// {TanGu:can1.height.last(0)}>{$HIGHT_HIGH2}
-				exp = "{"+conf.getHost_name()+":can"+c.getId()+".height.last(0)}>{$HIGHT_HIGH2}";
-			}else{
-				// {TanGu:can1.height.min(#10)}>{$HIGHT_HIGH2}
-				exp = "{"+conf.getHost_name()+":can"+c.getId()+".height.min(300)}>{$HIGHT_HIGH2}";
-			}
-		}else{
-			if(level==0){
-				// ({TanGu:can1.height.last(0)}<{$HIGHT_LOW1}&{TanGu:can1.height.last(0)}>{$HIGHT_LOW2})|{TanGu:can1.height.last(0)}={$HIGHT_LOW2}
-				exp = "({"+conf.getHost_name()+":can"+c.getId()+".height.last(0)}<{$HIGHT_LOW1}&{"
-						+conf.getHost_name()+":can"+c.getId()+".height.last(0)}>{$HIGHT_LOW2})|{"
-						+conf.getHost_name()+":can"+c.getId()+".height.last(0)}={$HIGHT_LOW2}";
-			}else if(level==1){
-				// {TanGu:can1.height.last(0)}<{$HIGHT_LOW2}
-				exp = "{"+conf.getHost_name()+":can"+c.getId()+".height.last(0)}<{$HIGHT_LOW2}";
-			}else{
-				// {TanGu:can1.height.max(#10)}<{$HIGHT_LOW2}
-				// 采集的10次数据(5min)最大小于200
-				exp = "{"+conf.getHost_name()+":can"+c.getId()+".height.max(300)}<{$HIGHT_LOW2}";
-			}
+		if(i==0){			
+			// {TanGu:can1.height.last(0)}>{$HIGHT_HIGH1}|({TRIGGER.VALUE}=1&{TanGu:can1.height.last(0)}>{$HIGHT_HIGH2})
+			exp = "{"+conf.getHost_name()+":can"+c.getId()+".height.last(0)}>{$HIGHT_HIGH1}|({TRIGGER.VALUE}=1&{"
+					+conf.getHost_name()+":can"+c.getId()+".height.last(0)}>{$HIGHT_HIGH2})";	// 注意>等不用人为转义		
+		}else{		
+			// {TanGu:can1.height.last(0)}<{$HIGHT_LOW1}|({TRIGGER.VALUE}=1&{TanGu:can1.height.last(0)}<{$HIGHT_LOW2})
+			exp = "{"+conf.getHost_name()+":can"+c.getId()+".height.last(0)}<{$HIGHT_LOW1}|({TRIGGER.VALUE}=1&{"
+					+conf.getHost_name()+":can"+c.getId()+".height.last(0)}<{$HIGHT_LOW2})";
 		}
 		return exp;
-	}
-
-	private String getPriority(int level) {
-	// trigger 的 警告级别
-		String priority;
-		if(level==0){
-			priority = "2";
-		}else if(level==1){
-			priority = "4";
-		}else{
-			priority = "5";
-		}
-		return priority;
 	}
 
 	private void createPumpSpeedItem(Element items, Gun g){
