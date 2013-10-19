@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hosts>
+    <file_path>d:/guizhou.xml</file_path>
+    <db name="root_on_db">
+       <ip>10.194.210.207</ip>
+       <group>贵州省</group>
+    </db>
+    <province name="GuiZhou">
+       <group>贵州省</group>
+       <city name="GuiYang">
+           <group>贵阳市</group>
+           <block name="NanMing">
+               <group>南明区</group>
+               <station name="LDB1">
+                   <ip>10.194.18.211</ip>
+                   <group>龙洞堡服务区1站</group>
+                   <name_cn>龙洞堡服务区1站</name_cn>
+                   <can_gun>1:9,12/2:8,11/3:7,10/4:1,2,3,4,5,6</can_gun>
+                   <can_sort>1:0/2:97/3:93/4:0</can_sort>
+               </station>
+           </block>
+       </city>
+    </province>
+    
+    
+</hosts>

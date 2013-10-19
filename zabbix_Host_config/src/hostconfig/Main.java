@@ -1,6 +1,6 @@
 package hostconfig;
 
-import hostconfig.conf.Configuration;
+import hostconfig.xml.Configuration;
 
 import org.dom4j.Document;
 
@@ -24,14 +24,18 @@ import org.dom4j.Document;
  * 		修改各trigger阈值
  * 		增加卸油时付油trigger
  * 		修改超高超低（迟滞）
+ * v1.3
+ * 		增加多个host
+ * 		对整个省的站整合
+ * 		采用xml方式配置
+ * 		其他具体内容修改
  * @author ycj
  *
  */
 public class Main {
 	public static void main(String[] args) {
-		String config_files[] = {"hostconfig/conf/tangu_host.properties","hostconfig/conf/fenglin_host.properties"};
-//		String config_file= "hostconfig/conf/fenglin_host.properties"; 
-//		String config_file= "hostconfig/conf/tangu_host.properties"; 
+//		String config_files[] = {"hostconfig/conf/tangu_host.properties","hostconfig/conf/fenglin_host.properties"};
+		String config_files[] = {"hostconfig/xml/hebei.xml","hostconfig/xml/guizhou.xml"};
 		for(int i=0;i<config_files.length;i++){		
 			// init
 			Configuration conf = new Configuration();
@@ -46,8 +50,8 @@ public class Main {
 			String filepath = conf.getFilePath();
 			// create xml
 			CreateHostConf factory = new CreateHostConf(conf);
-			Document root = factory.getDocument();
-			factory.writeDocument(root, filepath);
+			Document doc = factory.getDocument();
+			factory.writeDocument(doc, filepath);
 		}
 	}
 }

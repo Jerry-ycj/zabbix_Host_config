@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hosts>
+    <file_path>d:/hebei.xml</file_path>
+    <db name="root_on_db">
+       <ip>10.179.201.246</ip>
+       <group>河北省</group>
+    </db>
+    <province name="HeBei">
+       <group>河北省</group>
+       <city name="ShiJiaZhuang">
+           <group>石家庄市</group>
+           <block name="ChangAn">
+               <group>长安片区</group>
+               <station name="TanGu">
+                   <ip>172.17.52.35</ip>
+                   <group>谈固站</group>
+                   <name_cn>谈固</name_cn>
+                   <can_gun>1:2,3,8,13/3:1,4,5,6,11,15/4:9,12,14</can_gun>
+                   <can_sort>1:97/3:93/4:0</can_sort>
+               </station>
+           </block>
+           <block name="QiaoXi">
+               <group>桥西片区</group>
+               <station name="XFL">
+                   <ip>172.17.46.229</ip>
+                   <group>枫林站</group>
+                   <name_cn>枫林</name_cn>
+                   <can_gun>1:2,3,6,7/2:1,4,8,9/3:5,12,13/4:10,15/5:11,14,16</can_gun>
+                   <can_sort>1:97/2:93/3:93/4:0/5:0</can_sort>
+               </station>
+           </block>
+       </city>
+    </province>
+    
+    
+</hosts>
